@@ -1,0 +1,83 @@
+  parser: "babel-eslint"
+  env:
+    browser: true
+    node: true
+    mocha: true
+    es6: true
+#  plugins:
+#    - angular
+  globals:
+    angular: true
+  ecmaFeatures:
+    modules: true
+  rules:
+  # ES6
+    no-var: 2
+    prefer-const: 0
+  # rules
+    strict: [0, "never"] # babel do it for us - https://babeljs.io/docs/advanced/transformers/other/strict/
+    indent: [2, 2]
+    quotes: [2, "single", "avoid-escape"]
+    brace-style: [2, "1tbs"]
+    comma-style: [2, "last"]
+    func-style: [0, "expression"] # because of Y052 and Y053 and compatibility with exist code
+    no-nested-ternary: 0  # I like use Ternaries
+    no-undefined: 2
+    no-unused-vars: [2, {"vars": "all", "args": "after-used"}]
+    space-before-function-paren: [2, { anonymous: "always", named: "never"}]
+    space-after-keywords: [2, "always"]
+    space-before-blocks: 2
+    spaced-line-comment: [0, "never"] #"always", { exceptions: ["-"]}]
+    valid-jsdoc: [2, { prefer: { return: "returns"}}]
+    no-underscore-dangle: 1
+## angular
+#    angular/ng_controller_name:
+#      - 2
+#      - /[A-Z].*Ctrl$/
+# best practice
+    block-scoped-var: 0
+    complexity: [1, 5]
+    curly: [2, "all"]
+    consistent-return: 1
+    default-case: 2
+    dot-notation: 2
+    dot-location: [2, "property"]
+    eqeqeq: 1
+    guard-for-in: 1
+    no-alert: 2
+    no-caller: 2
+    no-div-regex: 1
+    no-else-return: 2
+    no-eq-null: 2
+    no-eval: 2
+    no-fallthrough: 2
+    no-floating-decimal: 2
+    no-labels: 2
+    no-lone-blocks: 2
+    no-loop-func: 2
+    no-multi-spaces: 2
+    no-multi-str: 2
+    no-native-reassign: [2, {exceptions: ["Object"]}]
+    no-new-func: 2
+    no-new-wrappers: 2
+    no-new: 2
+    no-octal-escape: 2
+    no-octal: 2
+    no-param-reassign: 2
+    no-process-env: 2
+    no-proto: 2
+    no-redeclare: 2
+    no-return-assign: 2
+    no-script-url: 2
+    no-self-compare: 2
+    no-sequences: 2
+    no-throw-literal: 2
+    no-unused-expressions: 2
+    no-use-before-define: [2, "nofunc"]
+    no-void: 2
+    no-warning-comments: 1
+    no-with: 2
+    radix: 2
+    vars-on-top: 2
+    wrap-iife: [2, "inside"]
+    yoda: [2, "always", { "exceptRange": true }]

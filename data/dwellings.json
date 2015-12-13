@@ -3,6 +3,7 @@
     "id": 11476166,
     "dataset_code": "RPP_M_IE_N_TD_CC_1_00",
     "database_code": "ECB",
+    "short-name": "Dwellings",
     "name": "Ireland; Residential property prices, New and existing dwellings; Residential property in good \u0026 poor condition; Capital city; ; NSI",
     "description": "Ireland; Residential property prices, New and existing dwellings; Residential property in good \u0026 poor condition; Capital city; Neither seasonally nor working day adjusted; NSI, :, Dataset:RPP : Residential Property Price Index Statistics Explanation page (Series and Dataset Level Information)",
     "refreshed_at": "2015-11-20T23:57:14.306Z",

@@ -8,7 +8,8 @@
   },
   "dependencies": {
     "babel-plugin-transform-runtime": "^6.3.13",
-    "d3": "^3.5.10"
+    "d3": "^3.5.10",
+    "lodash": "^3.10.1"
   },
   "devDependencies": {
     "babel-core": "^6.3.17",
