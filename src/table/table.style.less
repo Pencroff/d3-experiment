@@ -1,0 +1,34 @@
+@border-color: #777;
+
+.data-table {
+  width: 99%;
+  max-width: 768px;
+  min-width: 480px;
+  margin: 10px auto 0;
+  background: lighten(@border-color, 50%);
+  border-collapse: collapse;
+  border: 1px @border-color solid;
+
+  &__head-row {
+    height: 50px;
+    background: lighten(@border-color, 30%);
+    padding: 0;
+  }
+  &__head-cell {
+    text-align: center;
+    border: 1px @border-color solid;
+    width: 25%;
+    font-family: Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  }
+
+  &__data-row {
+    &:nth-child(even) {
+      background: lighten(@border-color, 45%);
+    }
+  }
+  &__data-cell {
+    text-align: left;
+    padding: 1px 40px;
+    font-family: Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+  }
+}
