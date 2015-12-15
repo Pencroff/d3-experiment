@@ -1,6 +1,61 @@
 .main-title {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 16px;
   margin: 10px 0 0 10px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.data-table {
+  width: 99%;
+  max-width: 768px;
+  min-width: 480px;
+  margin: 10px auto 0;
+  background: #f7f7f7;
+  border-collapse: collapse;
+  border: 1px #777 solid;
+}
+.data-table__head-row {
+  height: 50px;
+  background: #c3c3c3;
+  padding: 0;
+}
+.data-table__head-cell {
+  text-align: center;
+  border: 1px #777 solid;
+  width: 25%;
+  font-family: Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+}
+.data-table__data-row:nth-child(even) {
+  background: #eaeaea;
+}
+.data-table__data-cell {
+  text-align: left;
+  padding: 1px 40px;
+  font-family: Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+}
+.data-chart {
+  width: 960px;
+  margin: 10px auto 0;
+  background: #F5EDE3;
+  padding: 15px 10px 10px;
+  font: 10px sans-serif;
+}
+.data-chart__x-axis path,
+.data-chart__x-axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+.data-chart__y-axis path,
+.data-chart__y-axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+.data-chart__line {
+  fill: none;
+  stroke: black;
+  stroke-width: 1.5px;
 }
 
 /*# sourceMappingURL=styles.css.map*/
