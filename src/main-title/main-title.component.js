@@ -5,5 +5,5 @@ import './main-title.style.less';
 import d3 from 'd3';
 
 export function mainTitle() {
-    console.log('main-title');
+    //console.log('main-title');
 }

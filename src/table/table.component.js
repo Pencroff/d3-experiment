@@ -27,13 +27,14 @@ export function table(rootClass, dataset) {
     .append('tr')
     .classed('data-table__data-row', true)
     .selectAll('td')
-    .data(row =>
-      _.map(dataset.columns,
-        col => row[col])
-    ).enter()
+    .data(mapRowToColumns).enter()
     .append('td')
     .classed('data-table__data-cell', true)
     .text(col => col);
 
   return dataset;
+
+  function mapRowToColumns(row) {
+    return _.map(dataset.columns, col => row[col]);
+  }
 }

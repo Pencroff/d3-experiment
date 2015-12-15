@@ -44,7 +44,7 @@ function pushDataFromDataset(result, dataSet) {
 }
 
 function calculateDelta(result) {
-  const deltaColName = 'delta';
+  const deltaColName = 'Delta';
   const colA = result.columns[1];
   const colB = result.columns[2];
   _.forEach(result.data, item => item[deltaColName] = _.round(item[colA] - item[colB], 2));

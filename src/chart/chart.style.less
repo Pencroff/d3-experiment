@@ -1,0 +1,33 @@
+@chart-width: 960px;
+@background-color: #F5EDE3;
+
+.data-chart {
+  width: @chart-width;
+  margin: 10px auto 0;
+  background: @background-color;
+  padding: 15px 10px 10px;
+  font: 10px sans-serif;
+
+  &__x-axis {
+    path, line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+  }
+  &__y-axis {
+    path, line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+  }
+  &__line {
+    fill: none;
+    stroke: black;
+    stroke-width: 1.5px;
+  }
+  &__legend {
+
+  }
+}
