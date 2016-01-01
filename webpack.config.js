@@ -3,7 +3,6 @@
  */
 'use strict';
 
-const NODE_ENV = process.env.NODE_ENV || 'development';
 const ExtractTextPlugin = require('extract-text-webpack-plugin');
 const webpack = require('webpack');
 
@@ -17,10 +16,6 @@ module.exports = {
         filename: '[name].js'
     },
 
-    //watch: NODE_ENV === 'development',
-    //watchOptions: {
-    //    aggregateTimeout: 150
-    //},
     devtool: 'source-map',
 
     module: {
