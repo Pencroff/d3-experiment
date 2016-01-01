@@ -117,7 +117,7 @@
 	 * 
 	 */
 	/**
-	 * bluebird build version 3.0.6
+	 * bluebird build version 3.1.1
 	 * Features enabled: core, race, call_get, generators, map, nodeify, promisify, props, reduce, settle, some, using, timers, filter, any, each
 	*/
 	!function(e){if(true)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.Promise=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof _dereq_=="function"&&_dereq_;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof _dereq_=="function"&&_dereq_;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
@@ -161,8 +161,7 @@
 	    this.drainQueues = function () {
 	        self._drainQueues();
 	    };
-	    this._schedule =
-	        schedule.isStatic ? schedule(this.drainQueues) : schedule;
+	    this._schedule = schedule;
 	}
 	
 	Async.prototype.enableTrampoline = function() {
@@ -227,9 +226,6 @@
 	    Async.prototype.invoke = AsyncInvoke;
 	    Async.prototype.settlePromises = AsyncSettlePromises;
 	} else {
-	    if (schedule.isStatic) {
-	        schedule = function(fn) { setTimeout(fn, 0); };
-	    }
 	    Async.prototype.invokeLater = function (fn, receiver, arg) {
 	        if (this._trampolineEnabled) {
 	            AsyncInvokeLater.call(this, fn, receiver, arg);
@@ -771,19 +767,24 @@
 	                        (true ||
 	                         util.env("BLUEBIRD_DEBUG") ||
 	                         util.env("NODE_ENV") === "development"));
+	
 	var warnings = !!(util.env("BLUEBIRD_WARNINGS") != 0 &&
 	    (debugging || util.env("BLUEBIRD_WARNINGS")));
+	
 	var longStackTraces = !!(util.env("BLUEBIRD_LONG_STACK_TRACES") != 0 &&
 	    (debugging || util.env("BLUEBIRD_LONG_STACK_TRACES")));
+	
+	var wForgottenReturn = util.env("BLUEBIRD_W_FORGOTTEN_RETURN") != 0 &&
+	    (warnings || !!util.env("BLUEBIRD_W_FORGOTTEN_RETURN"));
 	
 	Promise.prototype.suppressUnhandledRejections = function() {
 	    var target = this._target();
 	    target._bitField = ((target._bitField & (~1048576)) |
-	                      2097152);
+	                      524288);
 	};
 	
 	Promise.prototype._ensurePossibleRejectionHandled = function () {
-	    if ((this._bitField & 2097152) !== 0) return;
+	    if ((this._bitField & 524288) !== 0) return;
 	    this._setRejectionIsUnhandled();
 	    async.invokeLater(this._notifyUnhandledRejection, this, undefined);
 	};
@@ -791,6 +792,14 @@
 	Promise.prototype._notifyUnhandledRejectionIsHandled = function () {
 	    fireRejectionEvent("rejectionHandled",
 	                                  unhandledRejectionHandled, undefined, this);
+	};
+	
+	Promise.prototype._setReturnedNonUndefined = function() {
+	    this._bitField = this._bitField | 268435456;
+	};
+	
+	Promise.prototype._returnedNonUndefined = function() {
+	    return (this._bitField & 268435456) !== 0;
 	};
 	
 	Promise.prototype._notifyUnhandledRejection = function () {
@@ -888,7 +897,15 @@
 	        }
 	    }
 	    if ("warnings" in opts) {
-	        config.warnings = !!opts.warnings;
+	        var warningsOption = opts.warnings;
+	        config.warnings = !!warningsOption;
+	        wForgottenReturn = config.warnings;
+	
+	        if (util.isObject(warningsOption)) {
+	            if ("wForgottenReturn" in warningsOption) {
+	                wForgottenReturn = !!warningsOption.wForgottenReturn;
+	            }
+	        }
 	    }
 	    if ("cancellation" in opts && opts.cancellation && !config.cancellation) {
 	        if (async.haveItemsQueued()) {
@@ -1027,13 +1044,15 @@
 	    }
 	}
 	
-	function checkForgottenReturns(returnValue, promiseCreated, name, promise) {
-	    if (returnValue === undefined &&
-	        promiseCreated !== null &&
-	        config.longStackTraces &&
-	        config.warnings) {
+	function checkForgottenReturns(returnValue, promiseCreated, name, promise,
+	                               parent) {
+	    if (returnValue === undefined && promiseCreated !== null &&
+	        wForgottenReturn) {
+	        if (parent !== undefined && parent._returnedNonUndefined()) return;
+	
+	        if (name) name = name + " ";
 	        var msg = "a promise was created in a " + name +
-	            " handler but was not returned from it";
+	            "handler but was not returned from it";
 	        promise._warn(msg, true, promiseCreated);
 	    }
 	}
@@ -1463,38 +1482,27 @@
 	            }
 	        };
 	    } else {
-	        var customEventWorks = false;
-	        var anyEventWorks = true;
-	        try {
-	            var ev = new self.CustomEvent("test");
-	            customEventWorks = ev instanceof CustomEvent;
-	        } catch (e) {}
-	        if (!customEventWorks) {
-	            try {
-	                var event = document.createEvent("CustomEvent");
-	                event.initCustomEvent("testingtheevent", false, true, {});
-	                self.dispatchEvent(event);
-	            } catch (e) {
-	                anyEventWorks = false;
-	            }
-	        }
-	        if (anyEventWorks) {
-	            fireDomEvent = function(type, detail) {
-	                var event;
-	                if (customEventWorks) {
-	                    event = new self.CustomEvent(type, {
-	                        detail: detail,
-	                        bubbles: false,
-	                        cancelable: true
-	                    });
-	                } else if (self.dispatchEvent) {
-	                    event = document.createEvent("CustomEvent");
-	                    event.initCustomEvent(type, false, true, detail);
-	                }
+	        var globalObject = typeof self !== "undefined" ? self :
+	                     typeof window !== "undefined" ? window :
+	                     typeof global !== "undefined" ? global :
+	                     this !== undefined ? this : null;
 	
-	                return event ? !self.dispatchEvent(event) : false;
+	        if (!globalObject) {
+	            return function() {
+	                return false;
 	            };
 	        }
+	
+	        try {
+	            var event = document.createEvent("CustomEvent");
+	            event.initCustomEvent("testingtheevent", false, true, {});
+	            globalObject.dispatchEvent(event);
+	            fireDomEvent = function(type, detail) {
+	                var event = document.createEvent("CustomEvent");
+	                event.initCustomEvent(type, false, true, detail);
+	                return !globalObject.dispatchEvent(event);
+	            };
+	        } catch (e) {}
 	
 	        var toWindowMethodNameMap = {};
 	        toWindowMethodNameMap["unhandledRejection"] = ("on" +
@@ -1504,12 +1512,12 @@
 	
 	        return function(name, reason, promise) {
 	            var methodName = toWindowMethodNameMap[name];
-	            var method = self[methodName];
+	            var method = globalObject[methodName];
 	            if (!method) return false;
 	            if (name === "rejectionHandled") {
-	                method.call(self, promise);
+	                method.call(globalObject, promise);
 	            } else {
-	                method.call(self, reason, promise);
+	                method.call(globalObject, reason, promise);
 	            }
 	            return true;
 	        };
@@ -1899,6 +1907,7 @@
 	            ? handler.call(promise._boundValue())
 	            : handler.call(promise._boundValue(), reasonOrValue);
 	        if (ret !== undefined) {
+	            promise._setReturnedNonUndefined();
 	            var maybePromise = tryConvertToPromise(ret, promise);
 	            if (maybePromise instanceof Promise) {
 	                if (this.cancelPromise != null) {
@@ -2003,7 +2012,7 @@
 	util.inherits(PromiseSpawn, Proxyable);
 	
 	PromiseSpawn.prototype._isResolved = function() {
-	    return this.promise === null;
+	    return this._promise === null;
 	};
 	
 	PromiseSpawn.prototype._cleanup = function() {
@@ -3136,7 +3145,7 @@
 	        var err = x === promise ? makeSelfResolutionError() : x.e;
 	        promise._rejectCallback(err, false);
 	    } else {
-	        debug.checkForgottenReturns(x, promiseCreated, "",  promise);
+	        debug.checkForgottenReturns(x, promiseCreated, "",  promise, this);
 	        promise._resolveCallback(x);
 	    }
 	};
@@ -4338,13 +4347,32 @@
 	          !(typeof window !== "undefined" &&
 	            window.navigator &&
 	            window.navigator.standalone)) {
-	    schedule = function(fn) {
+	    schedule = (function() {
 	        var div = document.createElement("div");
-	        var observer = new MutationObserver(fn);
-	        observer.observe(div, {attributes: true});
-	        return function() { div.classList.toggle("foo"); };
-	    };
-	    schedule.isStatic = true;
+	        var opts = {attributes: true};
+	        var toggleScheduled = false;
+	        var div2 = document.createElement("div");
+	        var o2 = new MutationObserver(function() {
+	            div.classList.toggle("foo");
+	          toggleScheduled = false;
+	        });
+	        o2.observe(div2, opts);
+	
+	        var scheduleToggle = function() {
+	            if (toggleScheduled) return;
+	          toggleScheduled = true;
+	          div2.classList.toggle("foo");
+	        };
+	
+	        return function schedule(fn) {
+	          var o = new MutationObserver(function() {
+	            o.disconnect();
+	            fn();
+	          });
+	          o.observe(div, opts);
+	          scheduleToggle();
+	        };
+	    })();
 	} else if (typeof setImmediate !== "undefined") {
 	    schedule = function (fn) {
 	        setImmediate(fn);
@@ -5565,7 +5593,7 @@
 
 	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_RESULT__;!function() {
 	  var d3 = {
-	    version: "3.5.10"
+	    version: "3.5.12"
 	  };
 	  var d3_arraySlice = [].slice, d3_array = function(list) {
 	    return d3_arraySlice.call(list);
@@ -11722,7 +11750,7 @@
 	          index: di,
 	          startAngle: x0,
 	          endAngle: x,
-	          value: (x - x0) / k
+	          value: groupSums[di]
 	        };
 	        x += padding;
 	      }
@@ -13130,7 +13158,9 @@
 	    return d3.rebind(scale, linear, "range", "rangeRound", "interpolate", "clamp");
 	  }
 	  function d3_scale_linearNice(domain, m) {
-	    return d3_scale_nice(domain, d3_scale_niceStep(d3_scale_linearTickRange(domain, m)[2]));
+	    d3_scale_nice(domain, d3_scale_niceStep(d3_scale_linearTickRange(domain, m)[2]));
+	    d3_scale_nice(domain, d3_scale_niceStep(d3_scale_linearTickRange(domain, m)[2]));
+	    return domain;
 	  }
 	  function d3_scale_linearTickRange(domain, m) {
 	    if (m == null) m = 10;
@@ -13232,10 +13262,11 @@
 	    scale.tickFormat = function(n, format) {
 	      if (!arguments.length) return d3_scale_logFormat;
 	      if (arguments.length < 2) format = d3_scale_logFormat; else if (typeof format !== "function") format = d3.format(format);
-	      var k = Math.max(.1, n / scale.ticks().length), f = positive ? (e = 1e-12, Math.ceil) : (e = -1e-12, 
-	      Math.floor), e;
+	      var k = Math.max(1, base * n / scale.ticks().length);
 	      return function(d) {
-	        return d / pow(f(log(d) + e)) <= k ? format(d) : "";
+	        var i = d / pow(Math.round(log(d)));
+	        if (i * base < base - .5) i *= base;
+	        return i <= k ? format(d) : "";
 	      };
 	    };
 	    scale.copy = function() {
@@ -27694,72 +27725,35 @@
 	 * Created by Pencroff on 14-Dec-15.
 	 */
 	function chart(rootClass, dataset) {
-	  //console.log(dataset);
-	  /*
-	   Delta: -3.04
-	   Dwellings: 61.23
-	   Flats: 58.19
-	   period: "2015-02-28"
-	   */
 	  var data = dataset.data;
-	  var columns = dataset.columns.slice(1);
-	
-	  var maxY = _d2.default.max([_d2.default.max(data, function (item) {
-	    return item.Flats;
-	  }), _d2.default.max(data, function (item) {
-	    return item.Dwellings;
-	  })]);
-	  var minY = _d2.default.min([_d2.default.min(data, function (item) {
-	    return item.Flats;
-	  }), _d2.default.min(data, function (item) {
-	    return item.Dwellings;
-	  })]);
-	  maxY = maxY + maxY * 0.1; // Add 10% to available max value
-	  minY = minY - minY * 0.1;
-	
-	  var maxYRight = _d2.default.max(data, function (item) {
-	    return item.Delta;
-	  });
-	  var minYRight = _d2.default.min(data, function (item) {
-	    return item.Delta;
-	  });
-	  maxYRight = maxYRight + maxYRight * 0.1;
-	  minYRight = minYRight - minYRight * 0.1;
+	  var chartsNames = dataset.columns.slice(1);
+	  var priceRange = calculatePriceMinMax(data);
+	  var priceDelta = calculateDeltaMinMax(data);
 	
 	  var margin = { top: 20, right: 20, bottom: 30, left: 40 };
 	  var width = 960 - margin.left - margin.right;
 	  var height = 500 - margin.top - margin.bottom;
 	
-	  var xTicksFilter = 11;
 	  var xAxisData = _d2.default.scale.ordinal().domain(data.map(function (d) {
 	    return d.period;
 	  }).reverse()).rangePoints([0, width]);
 	
-	  var yTicks = 5;
-	  var yAxisData = _d2.default.scale.linear().domain([minY, maxY]).range([height, 0]);
+	  var yAxisPriceData = _d2.default.scale.linear().domain([priceRange.min, priceRange.max]).range([height, 0]);
 	
-	  var yAxisDataRight = _d2.default.scale.linear().domain([minYRight, maxYRight]).range([height, 0]);
+	  var yAxisDeltaData = _d2.default.scale.linear().domain([priceDelta.min, priceDelta.max]).range([height, 0]);
 	
-	  var colors = _d2.default.scale.ordinal().domain(columns).range(['#2981BB', '#89A54E', '#DB843D']);
-	
-	  var xAxis = _d2.default.svg.axis().scale(xAxisData).tickValues(xAxisData.domain().filter(function (d, i) {
-	    return !(i % xTicksFilter);
-	  })).orient('bottom');
-	
-	  var yAxis = _d2.default.svg.axis().scale(yAxisData).orient('left').tickFormat(_d2.default.format('.2s')).ticks(yTicks);
-	
-	  var yAxisRight = _d2.default.svg.axis().scale(yAxisDataRight).orient('right').tickFormat(_d2.default.format('.2s')).ticks(yTicks);
+	  var colors = _d2.default.scale.ordinal().domain(chartsNames).range(['#2981BB', '#89A54E', '#DB843D']);
 	
 	  var lineFlats = _d2.default.svg.line().x(function (d) {
 	    return xAxisData(d.period);
 	  }).y(function (d) {
-	    return yAxisData(d.Flats);
+	    return yAxisPriceData(d.Flats);
 	  });
 	
 	  var lineDwellings = _d2.default.svg.line().x(function (d) {
 	    return xAxisData(d.period);
 	  }).y(function (d) {
-	    return yAxisData(d.Dwellings);
+	    return yAxisPriceData(d.Dwellings);
 	  });
 	
 	  var lineDelta = _d2.default.svg.line()
@@ -27767,30 +27761,54 @@
 	  .x(function (d) {
 	    return xAxisData(d.period);
 	  }).y(function (d) {
-	    return yAxisDataRight(d.Delta);
+	    return yAxisDeltaData(d.Delta);
 	  });
 	
-	  var svg = _d2.default.select(rootClass).append('div').classed('data-chart', true).append('svg').attr('width', width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+	  var canvas = _d2.default.select(rootClass).append('div').classed('data-chart', true).append('svg').attr('width', width + margin.left + margin.right).attr('height', height + margin.top + margin.bottom).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 	
-	  svg.append('g').attr('class', 'data-chart__x-axis').attr('transform', 'translate(0,' + height + ')').call(xAxis);
+	  appendXAxis(canvas, xAxisData, height);
+	  appendYAxisPrice(canvas, yAxisPriceData);
+	  appendYAxisDelta(canvas, yAxisDeltaData, width);
 	
-	  svg.append('g').attr('class', 'data-chart__y-axis').call(yAxis).append('text').attr('transform', 'rotate(-90)').attr('y', 6).attr('dy', '.71em').style('text-anchor', 'end').text('2007 year = 100%');
+	  appendChart(canvas, data, lineFlats, colors(chartsNames[0]));
+	  appendChart(canvas, data, lineDwellings, colors(chartsNames[1]));
+	  appendChart(canvas, data, lineDelta, colors(chartsNames[2]));
 	
-	  svg.append('g').attr('class', 'data-chart__y-axis').attr('transform', 'translate(' + (width - 10) + ' ,0)').call(yAxisRight).append('text').attr('transform', 'rotate(-90)').attr('y', 6).attr('dy', '-1em').style('text-anchor', 'end').text('Delta');
+	  appendLegend(canvas, chartsNames, colors, width);
+	}
 	
-	  svg.append('path').datum(data).attr('class', 'data-chart__line').attr('d', lineFlats).style('stroke', function (d) {
-	    return colors(columns[0]);
+	function appendChart(canvas, data, chartData, color) {
+	  canvas.append('path').datum(data).attr('class', 'data-chart__line').attr('d', chartData).style('stroke', function (d) {
+	    return color;
 	  });
+	}
 	
-	  svg.append('path').datum(data).attr('class', 'data-chart__line').attr('d', lineDwellings).style('stroke', function (d) {
-	    return colors(columns[1]);
-	  });
+	function appendXAxis(canvas, xAxisData, height) {
+	  var xTicksFilter = 11;
 	
-	  svg.append('path').datum(data).attr('class', 'data-chart__line').attr('d', lineDelta).style('stroke', function (d) {
-	    return colors(columns[2]);
-	  });
+	  var xAxis = _d2.default.svg.axis().scale(xAxisData).tickValues(xAxisData.domain().filter(function (item, index) {
+	    return !(index % xTicksFilter);
+	  })).orient('bottom');
 	
-	  var legend = svg.selectAll('.data-chart__legend').data(columns).enter().append('g').attr('class', 'data-chart__legend').attr('transform', function (d, i) {
+	  canvas.append('g').attr('class', 'data-chart__x-axis').attr('transform', 'translate(0,' + height + ')').call(xAxis);
+	}
+	
+	function appendYAxisPrice(canvas, yAxisDataPrice) {
+	  var yTicks = 5;
+	  var yAxisPrice = _d2.default.svg.axis().scale(yAxisDataPrice).orient('left').tickFormat(_d2.default.format('.2s')).ticks(yTicks);
+	
+	  canvas.append('g').attr('class', 'data-chart__y-axis').call(yAxisPrice).append('text').attr('transform', 'rotate(-90)').attr('y', 6).attr('dy', '.71em').style('text-anchor', 'end').text('2007 year = 100%');
+	}
+	
+	function appendYAxisDelta(canvas, yAxisDataDelta, width) {
+	  var yTicks = 7;
+	  var yAxisDelta = _d2.default.svg.axis().scale(yAxisDataDelta).orient('right').tickFormat(_d2.default.format('.2s')).ticks(yTicks);
+	
+	  canvas.append('g').attr('class', 'data-chart__y-axis').attr('transform', 'translate(' + (width - 10) + ' ,0)').call(yAxisDelta).append('text').attr('transform', 'rotate(-90)').attr('y', 6).attr('dy', '-1em').style('text-anchor', 'end').text('Delta');
+	}
+	
+	function appendLegend(canvas, names, colors, width) {
+	  var legend = canvas.selectAll('.data-chart__legend').data(names).enter().append('g').attr('class', 'data-chart__legend').attr('transform', function (d, i) {
 	    return 'translate(-40,' + i * 20 + ')';
 	  });
 	
@@ -27799,6 +27817,40 @@
 	  legend.append('text').attr('x', width - 24).attr('y', 9).attr('dy', '.35em').style('text-anchor', 'end').text(function (d) {
 	    return d;
 	  });
+	}
+	
+	function calculatePriceMinMax(data) {
+	  var maxYPrice = _d2.default.max([_d2.default.max(data, function (item) {
+	    return item.Flats;
+	  }), _d2.default.max(data, function (item) {
+	    return item.Dwellings;
+	  })]);
+	  var minYPrice = _d2.default.min([_d2.default.min(data, function (item) {
+	    return item.Flats;
+	  }), _d2.default.min(data, function (item) {
+	    return item.Dwellings;
+	  })]);
+	  maxYPrice = maxYPrice + maxYPrice * 0.1; // Add 10% to available max value
+	  minYPrice = minYPrice - Math.abs(minYPrice) * 0.1;
+	  return {
+	    min: minYPrice,
+	    max: maxYPrice
+	  };
+	}
+	
+	function calculateDeltaMinMax(data) {
+	  var maxYDelta = _d2.default.max(data, function (item) {
+	    return item.Delta;
+	  });
+	  var minYDelta = _d2.default.min(data, function (item) {
+	    return item.Delta;
+	  });
+	  maxYDelta = maxYDelta + maxYDelta * 0.1;
+	  minYDelta = minYDelta - Math.abs(minYDelta) * 0.1;
+	  return {
+	    min: minYDelta,
+	    max: maxYDelta
+	  };
 	}
 
 /***/ },
